@@ -53,5 +53,3 @@ export default async (req) => {
 
   return json({ ok: false, error: "Use GET or POST." }, 405);
 };
-
-export const config = { path: "/api/state" };
