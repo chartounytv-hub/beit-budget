@@ -1,0 +1,10 @@
+{
+  "name": "beit-budget",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Household budget, tracking and 36-month forecast.",
+  "type": "module",
+  "dependencies": {
+    "@netlify/blobs": "^11.0.3"
+  }
+}

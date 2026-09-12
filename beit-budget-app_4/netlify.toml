@@ -1,0 +1,43 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+  # No site to build — this only installs the one package the sync function imports.
+  command = "npm install"
+
+[functions]
+  node_bundler = "esbuild"
+
+# The service worker and the page must never be served stale, or the app can't update itself.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# The sync endpoint. This must come BEFORE the catch-all below, or the app
+# would be served in its place and sync would silently look like it worked.
+[[redirects]]
+  from = "/api/state"
+  to = "/.netlify/functions/state"
+  status = 200
+  force = true
+
+# Single page: everything else lands on the app.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
