@@ -1,6 +1,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="format-detection" content="telephone=no">
+<meta name="robots" content="noindex, nofollow">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Beit Budget</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -266,7 +267,7 @@ table.tbl tr.tot td{font-weight:600; border-top:1px solid var(--ink-2)}
     <div class="top-row">
       <div class="brand">
         <b>Beit Budget</b>
-        <span class="eyebrow" style="font-size:10px">Akkary household</span>
+        <span class="eyebrow" style="font-size:10px" id="hhName"></span>
       </div>
       <span class="sync" id="syncChip"><i class="dot" id="syncDot"></i><span id="syncTxt">Starting…</span></span>
     </div>
@@ -305,38 +306,36 @@ table.tbl tr.tot td{font-weight:600; border-top:1px solid var(--ink-2)}
 
 /* ---------- the plan, as shipped in the workbook ---------- */
 const DEFAULT_MODEL = {
-  income: 12000, extraIncome: 0,
-  startCash: 0, startDebt: 7200,
-  goalAmount: 30000, goalMonths: 12,
-  startMonth: "2026-09",
+  /* A blank starter plan. Real figures live in the synced store, never in this
+     file -- this file is served publicly by whatever host the app sits on. */
+  householdName: "",
+  income: 0, extraIncome: 0,
+  startCash: 0, startDebt: 0,
+  goalAmount: 0, goalMonths: 12,
+  startMonth: new Date().toISOString().slice(0,7),
   lbpRate: 89500,
   levers: { Discretionary: 0.15, Fuel: 0.12, Groceries: 0.10 },
   lines: [
-    ["CHILDREN","School Tuition","Fixed","None",2000,""],
-    ["CHILDREN","Clothing & Supplies","Variable","None",80,""],
-    ["CHILDREN","Activities (Sports/Music)","Variable","Discretionary",350,""],
-    ["CHILDREN","Birthdays & Toys","Variable","Discretionary",20,""],
-    ["CHILDREN","Medical & Childcare","Variable","None",20,"Medical + babysitter"],
-    ["ENTERTAINMENT","Vacations & Travel","Variable","Discretionary",1000,"Vacations/hotels + tickets/visa"],
-    ["ENTERTAINMENT","Dining Out","Variable","Discretionary",400,""],
-    ["FOOD","Groceries & Toters","Variable","Groceries",1000,""],
-    ["FOOD","Restaurant Delivery","Variable","Discretionary",200,""],
-    ["GIFTS","Gifts & Celebrations","Variable","Discretionary",100,"Birthdays, dinners, Christmas, weddings"],
-    ["CONTRIBUTIONS","Giving & Tithes","Giving","None",1000,"Tithes + church"],
-    ["CONTRIBUTIONS","Family Support (Mom Health Ins.)","Fixed","None",200,""],
-    ["HOUSING","Home Fuel (Generator & Heating)","Fixed","Fuel",350,"Generator + gasoil/oven gas"],
-    ["HOUSING","Utilities & Subscriptions","Fixed","None",170,"Electricity, water, internet, mobile, municipality"],
-    ["HOUSING","Building Fees & Insurance","Fixed","None",170,"Building fees/concierge + fire insurance"],
-    ["HOUSING","Home Improvements (Achkout & Colorado)","Variable","Discretionary",100,""],
-    ["HOUSING","Home Maintenance & Supplies","Variable","None",50,"Repairs + household supplies"],
-    ["HOUSING","Helper / Household Staff","Fixed","None",350,"Includes work permit"],
-    ["INSURANCE","Family Health Insurance","Fixed","None",500,""],
-    ["INSURANCE","Car Insurance","Fixed","None",150,""],
-    ["HUSBAND","Personal","Variable","Discretionary",400,""],
-    ["WIFE","Personal","Variable","Discretionary",800,"Clothing + beauty"],
-    ["TRANSPORTATION","Fuel (Both Cars)","Variable","Fuel",350,""],
-    ["TRANSPORTATION","Maintenance & Mechanic (Both Cars)","Variable","None",50,""],
-    ["DEBT","Loan Payment (Akkary)","Debt","None",1200,""]
+    ["CHILDREN","School Tuition","Fixed","None",0,""],
+    ["CHILDREN","Clothing & Supplies","Variable","None",0,""],
+    ["CHILDREN","Activities","Variable","Discretionary",0,""],
+    ["CHILDREN","Medical & Childcare","Variable","None",0,""],
+    ["ENTERTAINMENT","Vacations & Travel","Variable","Discretionary",0,""],
+    ["ENTERTAINMENT","Dining Out","Variable","Discretionary",0,""],
+    ["FOOD","Groceries","Variable","Groceries",0,""],
+    ["FOOD","Delivery","Variable","Discretionary",0,""],
+    ["GIFTS","Gifts & Celebrations","Variable","Discretionary",0,""],
+    ["CONTRIBUTIONS","Giving","Giving","None",0,""],
+    ["HOUSING","Home Fuel","Fixed","Fuel",0,""],
+    ["HOUSING","Utilities & Subscriptions","Fixed","None",0,""],
+    ["HOUSING","Building Fees & Insurance","Fixed","None",0,""],
+    ["HOUSING","Home Maintenance & Supplies","Variable","None",0,""],
+    ["HOUSING","Household Help","Fixed","None",0,""],
+    ["INSURANCE","Health Insurance","Fixed","None",0,""],
+    ["INSURANCE","Car Insurance","Fixed","None",0,""],
+    ["TRANSPORTATION","Fuel","Variable","Fuel",0,""],
+    ["TRANSPORTATION","Maintenance & Mechanic","Variable","None",0,""],
+    ["DEBT","Loan Payment","Debt","None",0,""]
   ].map((r,i)=>({
     id:"L"+String(i+1).padStart(2,"0"),
     cat:r[0], name:r[1], cls:r[2], grp:r[3], amount:r[4], note:r[5],
@@ -775,6 +774,7 @@ async function connect(){
    Views
    ============================================================ */
 function render(){
+  document.getElementById("hhName").textContent = model.householdName || "";
   document.getElementById("mLabel").innerHTML = ymLabel(month,true)+
     "<small>"+(month===ymNow()?"This month":(month<ymNow()?"Past":"Ahead"))+"</small>";
   document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", String(t.dataset.view===view)));
@@ -1208,6 +1208,8 @@ function viewPlan(root){
   a.innerHTML='<div class="sec-head"><h2>Income & goals</h2></div>';
   const grid=el("div");
   grid.innerHTML=
+    '<div class="field"><label for="fld-householdName">Household name</label>'+
+      '<input id="fld-householdName" data-k="householdName" type="text" value="'+esc(model.householdName||"")+'" placeholder="shown in the header" autocomplete="off"></div>'+
     '<div class="two">'+f("income","Monthly income","number",model.income)+f("extraIncome","Extra income","number",model.extraIncome)+'</div>'+
     '<div class="two">'+f("startCash","Starting cash","number",model.startCash)+f("startDebt","Starting debt","number",model.startDebt)+'</div>'+
     '<div class="two">'+f("goalAmount","Savings goal","number",model.goalAmount)+f("goalMonths","Goal timeframe (months)","number",model.goalMonths)+'</div>'+
@@ -1386,8 +1388,8 @@ function viewPlan(root){
   const z=el("div","card");
   z.innerHTML='<div class="sec-head"><h2>Data</h2></div><p class="note">A copy is always kept on this device, so the app opens and keeps working with no signal and catches up when it reconnects.</p>';
   const br=el("div","btnrow"); br.style.marginTop="10px";
-  const r1=el("button","btn","Reset plan to the workbook");
-  r1.onclick=()=>{ if(window.confirm("Reset every budget line and assumption back to the Blue Print workbook? Logged expenses are kept.")){
+  const r1=el("button","btn","Reset plan to blank");
+  r1.onclick=()=>{ if(window.confirm("Reset every budget line and assumption to a blank starter plan? Logged expenses are kept.")){
     const keep=model.lbpRate; model=clone(DEFAULT_MODEL); model.lbpRate=keep; pushModel(); render(); toast("Plan reset"); } };
   br.append(r1); z.append(br); stack.append(z);
 }
@@ -1783,6 +1785,90 @@ function editLine(line, cat){
   };
   showSheet();
 }
+/* ============================================================
+   Tap-to-log: a link carries proposed expenses, you confirm, the app writes.
+   #import=<base64url of [{a:amount, d:"note", l:"line item name", t:"YYYY-MM-DD"}]>
+   Nothing is saved until you press the button -- the link only proposes.
+   ============================================================ */
+function b64urlDecode(s){
+  s=s.replace(/-/g,"+").replace(/_/g,"/");
+  while(s.length%4) s+="=";
+  return decodeURIComponent(Array.prototype.map.call(atob(s),
+    c=>"%"+("00"+c.charCodeAt(0).toString(16)).slice(-2)).join(""));
+}
+function lineByName(n){
+  const q=String(n||"").toLowerCase().trim();
+  if(!q) return null;
+  return model.lines.find(l=>l.name.toLowerCase()===q)
+      || model.lines.find(l=>(l.cat+": "+l.name).toLowerCase()===q)
+      || model.lines.find(l=>l.id.toLowerCase()===q)
+      || model.lines.find(l=>l.name.toLowerCase().indexOf(q)>-1)
+      || null;
+}
+function readImportLink(){
+  const m=location.hash.match(/import=([A-Za-z0-9_\-=]+)/);
+  if(!m) return null;
+  try{
+    const arr=JSON.parse(b64urlDecode(m[1]));
+    return Array.isArray(arr) ? arr.slice(0,20) : null;
+  }catch(e){ return null; }
+}
+function openProposed(items){
+  const today=new Date().toISOString().slice(0,10);
+  const rows=items.map(it=>{
+    const l=lineByName(it.l) || (it.d ? lineById(guessLine(it.d)) : null) || model.lines[0];
+    return { amount:num(it.a), desc:String(it.d||"").slice(0,80), date:(it.t||today).slice(0,10), lineId:l?l.id:"", use:num(it.a)>0 };
+  }).filter(r=>r.amount>0);
+  if(!rows.length){ toast("That link had nothing to log"); return; }
+  const s=document.getElementById("sheet");
+  const total=rows.reduce((a,r)=>a+r.amount,0);
+  s.innerHTML='<div class="handle"></div><h2>Log '+rows.length+' '+(rows.length===1?"expense":"expenses")+'?</h2>'+
+    (backend==="local"
+      ? '<p class="note"><strong class="wrn">This copy isn\'t syncing.</strong> Entries saved here stay on this device. Add your household code under Plan &rarr; Sync first, then tap the link again.</p>'
+      : '<p class="note">Check the line items, then save. Nothing is written until you do.</p>');
+  const b=el("div");
+  const list=el("div","picker"); list.style.maxHeight="46vh";
+  rows.forEach((r,i)=>{
+    const row=el("div","pick"); row.style.cssText="display:block;cursor:default";
+    row.innerHTML='<div style="display:flex;gap:8px;align-items:center">'+
+      '<input type="checkbox" id="pi-'+i+'" checked style="width:18px;height:18px;accent-color:var(--accent)">'+
+      '<label for="pi-'+i+'" style="flex:1;min-width:0"><span style="display:block">'+esc(r.desc||"Expense")+'</span>'+
+      '<small>'+esc(r.date)+'</small></label><span class="num">'+esc(fmt0(r.amount))+'</span></div>'+
+      '<select class="inp" data-i="'+i+'" style="margin-top:6px;font-size:12.5px;padding:6px 8px">'+
+        usedCats().map(cat=>'<optgroup label="'+esc(title(cat))+'">'+
+          model.lines.filter(l=>l.cat===cat).map(l=>'<option value="'+l.id+'"'+(l.id===r.lineId?" selected":"")+'>'+esc(l.name)+'</option>').join("")+
+        '</optgroup>').join("")+'</select>';
+    list.append(row);
+  });
+  b.append(list);
+  const br=el("div","btnrow"); br.style.marginTop="12px";
+  const go=el("button","btn primary","Save "+fmt0(total)); go.style.flex="1";
+  const no=el("button","btn","Cancel");
+  br.append(go,no); b.append(br); s.append(b);
+  b.querySelectorAll('input[type="checkbox"]').forEach((cb,i)=>cb.addEventListener("change",()=>{
+    rows[i].use=cb.checked;
+    const t=rows.filter(r=>r.use).reduce((a,r)=>a+r.amount,0);
+    go.textContent="Save "+fmt0(t);
+  }));
+  b.querySelectorAll("select").forEach(sel=>sel.addEventListener("change",()=>{ rows[+sel.dataset.i].lineId=sel.value; }));
+  const clear=()=>{ history.replaceState(null,"",location.pathname+location.search); };
+  no.onclick=()=>{ clear(); closeSheet(); };
+  go.onclick=async()=>{
+    const picked=rows.filter(r=>r.use && r.lineId);
+    if(!picked.length){ toast("Nothing selected"); return; }
+    go.disabled=true; go.textContent="Saving...";
+    for(const r of picked){
+      if(r.desc) learnRule(r.desc, r.lineId);
+      await pushEntry({ id:uid(), date:r.date, month:r.date.slice(0,7), lineId:r.lineId,
+        desc:r.desc, amount:Math.round(r.amount*100)/100, ccy:"USD", raw:r.amount,
+        kind:"manual", by:who||"", photo:null }, true);
+    }
+    clear(); closeSheet(); render();
+    toast(picked.length+" logged"+(backend==="local"?" on this device":" and synced"));
+  };
+  showSheet();
+}
+
 function showSheet(){ document.getElementById("scrim").classList.add("on"); document.getElementById("sheet").classList.add("on"); }
 function closeSheet(){ document.getElementById("scrim").classList.remove("on"); document.getElementById("sheet").classList.remove("on"); }
 
@@ -1875,7 +1961,10 @@ function stage(b){
   const body=imp.hasHeader ? imp.rows.slice(1) : imp.rows;
   const seen=new Set(entries.map(e=>e.src).filter(Boolean));
   const vals=body.map(r=>parseAmount(r[imp.cols.amount])).filter(v=>v!==null);
-  const negMajority = vals.filter(v=>v<0).length > vals.length/2;   // banks usually sign spending negative
+  /* Banks sign debits negative. If ANY row is negative, negatives are the
+     spending and positives are credits -- a majority test misreads a short
+     statement where one credit outnumbers one debit. */
+  const negMajority = vals.some(v=>v<0);
   imp.staged=body.map(r=>{
     const date=parseDate(r[imp.cols.date]);
     const rawAmt=parseAmount(r[imp.cols.amount]);
@@ -2157,12 +2246,17 @@ if(shared){
   const desc=shared.replace(/(\d+(?:[.,]\d+)?)/,"").replace(/\s+/g," ").trim();
   setTimeout(()=>openAdd({ amount:amt, desc, lineId:guessLine(desc)||recentLines()[0]||model.lines[0].id }),150);
 }
+else if(readImportLink()){ setTimeout(()=>openProposed(readImportLink()),150); }
 else if(location.hash.toLowerCase().indexOf("add")>-1){ setTimeout(openAdd,120); }
 else{
   let asked=false; try{ asked=!!localStorage.getItem(LS+"-asked"); }catch(e){}
   if(!asked && !who) setTimeout(askWho,700);
 }
-window.addEventListener("hashchange",()=>{ if(location.hash.toLowerCase().indexOf("add")>-1) openAdd(); });
+window.addEventListener("hashchange",()=>{
+  const imp=readImportLink();
+  if(imp) openProposed(imp);
+  else if(location.hash.toLowerCase().indexOf("add")>-1) openAdd();
+});
 
 /* installed-app plumbing — only where the page is served over http(s) from its own address */
 if("serviceWorker" in navigator && location.protocol.startsWith("http") && !window.claude){
